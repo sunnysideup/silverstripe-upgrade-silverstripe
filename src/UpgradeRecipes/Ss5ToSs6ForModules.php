@@ -58,9 +58,8 @@ class Ss5ToSs6ForModules extends BaseClass
         // 'ComposerUpdateRequirements' => [],
         // update composer requirements to ss6 compatible versions
         // test
-        'WebRootDirReset-2' => [],
         'SwitchPhpVersion-2' => [
-            'version' => '8.4',
+            'version' => '8.3',
             'alsoReinstallWithComposer' => false,
         ],
         'CheckoutTempUpgradeBranch' => [],

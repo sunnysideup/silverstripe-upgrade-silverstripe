@@ -2,6 +2,9 @@
 
 namespace Sunnysideup\UpgradeSilverstripe\Traits;
 
+use Sunnysideup\UpgradeSilverstripe\Interfaces\ModuleUpgraderInterface;
+use Sunnysideup\UpgradeSilverstripe\ModuleUpgrader;
+
 trait GettersAndSetters
 {
     /**
@@ -37,6 +40,9 @@ trait GettersAndSetters
                 );
             }
         } else {
+            if ($function == 'mu' && $this instanceof ModuleUpgrader) {
+                return $this;
+            }
             user_error(
                 'Fatal error: Call to undefined method ModuleUpgraderBaseWithVariables::' . $function . '()',
                 E_USER_ERROR
