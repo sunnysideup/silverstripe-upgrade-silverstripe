@@ -36,8 +36,7 @@ And then renames the branch to ' . $this->newBranch . '  (customisable using set
 =============================================================================
 NB: this branch may just be created and so composer may fail here,
 simply start again in a few minutes in this case to make it work.
-After that, it replaces master with main as the branch name.
-=============================================================================';
+After that, it replaces master with main as the branch name.';
     }
 
     /**

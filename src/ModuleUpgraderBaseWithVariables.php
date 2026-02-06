@@ -7,6 +7,7 @@ use Sunnysideup\UpgradeSilverstripe\Api\SessionManagement;
 use Sunnysideup\UpgradeSilverstripe\Interfaces\ModuleUpgraderInterface;
 use Sunnysideup\UpgradeSilverstripe\Interfaces\SessionManagementInterface;
 use Sunnysideup\UpgradeSilverstripe\Traits\GettersAndSetters;
+use Sunnysideup\UpgradeSilverstripe\Traits\HelperInst;
 use Sunnysideup\UpgradeSilverstripe\Traits\Misc;
 use Sunnysideup\UpgradeSilverstripe\UpgradeRecipes\ApplyNamespacing;
 use Sunnysideup\UpgradeSilverstripe\UpgradeRecipes\Ss33ToSs37;

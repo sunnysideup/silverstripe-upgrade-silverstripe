@@ -21,8 +21,8 @@ class CheckoutTempUpgradeBranch extends Task
     public function getDescription()
     {
         return '
-            Creates a starter branch: "' . $this->mu()->getNameOfUpgradeStarterBranch() . '" of your module/app
-            from the "' . $this->mu()->getNameOfBranchForBaseCode() . '" branch.
+            Creates a starter branch: "' . $this->mu()->getNameOfTempBranch() . '" of your module/app
+            from the "' . $this->mu()->getNameOfUpgradeStarterBranch() . '" branch.
             If it does not exist.
             These branch names can be customised with setNameOfUpgradeStarterBranch and setNameOfBranchForBaseCode.
             ';
@@ -35,8 +35,8 @@ class CheckoutTempUpgradeBranch extends Task
     {
         Git::inst($this->mu())->createNewBranchIfItDoesNotExist(
             $this->mu()->getGitRootDir(),
+            $this->mu()->getNameOfTempBranch(),
             $this->mu()->getNameOfUpgradeStarterBranch(),
-            $this->mu()->getNameOfBranchForBaseCode(),
             true
         );
         return null;

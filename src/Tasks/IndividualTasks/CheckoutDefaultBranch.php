@@ -26,7 +26,7 @@ class CheckoutDefaultBranch extends Task
     /**
      * Fallback list if we cannot detect remote HEAD.
      *
-     * @var string
+     * @var array
      */
     protected array $branchesToTryInThisOrder = ['develop', 'main', 'master'];
 
@@ -48,8 +48,7 @@ Checks out the default branch (remote HEAD) of the project/module.
 You can override this by setting branchOrTagToUse (or using setNameOfBranchForBaseCode).
 =============================================================================
 NB: this branch may just be created and so composer may fail here,
-simply start again in a few minutes in this case to make it work.
-=============================================================================';
+simply start again in a few minutes in this case to make it work.';
     }
 
     /**

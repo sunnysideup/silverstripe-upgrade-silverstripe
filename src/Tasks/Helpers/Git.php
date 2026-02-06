@@ -182,14 +182,12 @@ class Git
             'create branch ' . $newBranchName . ' from the ' . $fromBranchName . ' branch in ' . $dir,
             false
         );
-        $makeDefault = '';
         if ($alsoCheckOutAndMakeDefault) {
-            $makeDefault = ' -u ';
             $this->checkoutBranch($dir, $newBranchName);
         }
         $this->mu()->execMe(
             $dir,
-            'git push ' . $makeDefault . ' origin ' . $newBranchName,
+            'git show-ref --verify --quiet refs/heads/' . $newBranchName . ' || git branch ' . $newBranchName . ' origin/' . $newBranchName . ' && git push -u origin ' . $newBranchName,
             'push it ',
             false
         );
