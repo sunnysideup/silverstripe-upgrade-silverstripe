@@ -2,6 +2,7 @@
 
 namespace Sunnysideup\UpgradeSilverstripe\Tasks\IndividualTasks;
 
+use EasyCodingStandards;
 use Sunnysideup\PHP2CommandLine\PHP2CommandLineSingleton;
 use Sunnysideup\UpgradeSilverstripe\Tasks\Task;
 
@@ -30,23 +31,26 @@ class LintAll extends Task
      */
     public function runActualTask($params = []): ?string
     {
-        if (PHP2CommandLineSingleton::commandExists('sake-lint-all')) {
-            foreach ($this->mu()->getExistingModuleDirLocations() as $moduleDir) {
-                $this->mu()->execMe(
-                    $this->mu()->getWebRootDirLocation(),
-                    'sake-lint-all ' . $moduleDir,
-                    'Linting all PHP files in ' . $moduleDir,
-                    true
-                );
-            }
-        } else {
-            return 'You need to install sake-lint-all to use this task: https://github.com/sunnysideup/silverstripe-easy-coding-standards';
+        EasyCodingStandards::installIfNotInstalled($this->mu());
+        foreach ($this->mu()->getExistingModuleDirLocations() as $moduleDir) {
+            $this->mu()->execMe(
+                $this->mu()->getWebRootDirLocation(),
+                EasyCodingStandards::prependCommand() . 'sake-lint-all ' . $moduleDir,
+                'Linting all PHP files in ' . $moduleDir,
+                true
+            );
         }
+        EasyCodingStandards::removeIfInstalled($this->mu());
         return null;
     }
 
     protected function hasCommitAndPush()
     {
         return true;
+    }
+
+    public function getCommitMessage()
+    {
+        return $this->commitMessage = 'MNT: linting code';
     }
 }

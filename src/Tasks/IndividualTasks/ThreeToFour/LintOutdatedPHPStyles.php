@@ -1,6 +1,6 @@
 <?php
 
-namespace Sunnysideup\UpgradeSilverstripe\Tasks\IndividualTasks;
+namespace Sunnysideup\UpgradeSilverstripe\Tasks\IndividualTasks\ThreeToFour;
 
 use Sunnysideup\UpgradeSilverstripe\Tasks\Task;
 

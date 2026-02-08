@@ -6,6 +6,7 @@
 
 namespace Sunnysideup\UpgradeSilverstripe\Tasks\IndividualTasks;
 
+use EasyCodingStandards;
 use Sunnysideup\PHP2CommandLine\PHP2CommandLineSingleton;
 use Sunnysideup\UpgradeSilverstripe\Tasks\Helpers\Composer;
 use Sunnysideup\UpgradeSilverstripe\Tasks\Task;
@@ -40,71 +41,16 @@ class LintPHPCompatabilityCheck extends Task
 
     public function runActualTask($params = []): ?string
     {
-        $webRoot = $this->mu()->getWebRootDirLocation();
-        if (PHP2CommandLineSingleton::commandExists('sslint-compat')) {
-            foreach ($this->mu()->findNameSpaceAndCodeDirs() as $codeDir) {
-                // $file = str_replace('\\', '-', $baseNameSpace);
-                $this->mu()->execMe(
-                    $webRoot,
-                    'sslint-compat ' . $codeDir,
-                    'Running PHP Compatibility Check in: ' . $codeDir,
-                    false
-                );
-            }
-        } else {
-            Composer::inst($this->mu())
-                ->RequireDev(
-                    'squizlabs/php_codesniffer',
-                    '',
-                    $this->composerOptions
-                )
-                ->RequireDev(
-                    'phpcompatibility/php-compatibility',
-                    '',
-                    $this->composerOptions
-                );
-
+        EasyCodingStandards::installIfNotInstalled($this->mu());
+        foreach ($this->mu()->getExistingModuleDirLocations() as $moduleDir) {
             $this->mu()->execMe(
-                $webRoot,
-                './vendor/bin/phpcs --config-set installed_paths vendor/phpcompatibility/php-compatibility',
-                'Adding php compatability info',
-                false
+                $this->mu()->getWebRootDirLocation(),
+                EasyCodingStandards::prependCommand() . 'sake-lint-compat -p ' . $this->phpVersion . ' ' . $moduleDir,
+                'Linting check for PHP compatibility in ' . $moduleDir . ' using php ' . $this->phpVersion,
+                true
             );
-            $this->mu()->execMe(
-                $webRoot,
-                './vendor/bin/phpcs --config-set colors 1',
-                'Adding colour',
-                false
-            );
-            $this->mu()->execMe(
-                $webRoot,
-                './vendor/bin/phpcs --config-set severity 1',
-                'Showing all errors',
-                false
-            );
-            $this->mu()->execMe(
-                $webRoot,
-                './vendor/bin/phpcs --config-show',
-                'Showing all errors',
-                false
-            );
-            foreach ($this->mu()->findNameSpaceAndCodeDirs() as $codeDir) {
-                // $file = str_replace('\\', '-', $baseNameSpace);
-                $this->mu()->execMe(
-                    $webRoot,
-                    './vendor/bin/phpcs' .
-                        ' -p ' . $codeDir .
-                        ' --standard=PHPCompatibility' .
-                        ' --extensions=php ' .
-                        ' --runtime-set testVersion ' . $this->phpVersion,
-                    'Running PHP Compatibility Check in: ' . $codeDir,
-                    false
-                );
-            }
-            Composer::inst($this->mu())
-                ->Remove('squizlabs/php_codesniffer', true)
-                ->Remove('phpcompatibility/php-compatibility', true);
         }
+        EasyCodingStandards::removeIfInstalled($this->mu());
         return null;
     }
 

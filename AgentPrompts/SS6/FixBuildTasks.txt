@@ -1,0 +1,41 @@
+You are being given a directory of Silverstripe 5 BuildTask-related files.
+Each attached file contains one class that directly or indirectly inherit from `BuildTask` (including subclasses of subclasses).
+Files may already be (partially) upgraded to Silverstripe 6.
+
+Task: Upgrade every BuildTask class in these files from SS5 to SS6, preserving behaviour. Apply all required changes to each file that contains such a class.
+
+Here is some documentation:
+- Silverstripe 6 BuildTask: https://api.silverstripe.org/6/SilverStripe/Dev/BuildTask.html
+- Silverstripe 6 PolyCommand: https://api.silverstripe.org/6/SilverStripe/PolyExecution/PolyCommand.html
+- Changelog for BuildTasks: https://docs.silverstripe.org/en/6/changelogs/6.0.0/#cli-changes
+
+Note:
+
+1. BuildTask now extends Polycommand.
+
+2. We are providing you files in isolation, so any missing types or methods can be ignored in a diagnostic check.
+
+Action:
+
+1. Replace `run(HTTPRequest $request)` with `protected function execute(InputInterface $input, PolyOutput $output): int`.
+
+2. Remove `DB::alteration_message` checks and `echo`, as well as other outputs such as print_r(); use `$output->writeln()` instead. Do not output "Done" or anything like that; use `return Command::SUCCESS` instead.  The execute task needs to return that (or error code on error), etc...
+
+3. Properties to change / check: `$segment → protected static string $commandName`; `$title → protected string $title`; `$description → protected static string $description`.
+
+4. CLI options: Implement `getOptions(): array` for any `$request->getVar()` or similar (e.g. $_GET) checks using `InputOption`. When declaring InputOption, add a shortcut flag (second argument).
+
+5. Namespaces: We want to avoid references to `Director`, `HTTPRequest`; add `PolyOutput`, `Command`, `InputInterface`, `InputOption`. Update `BuildTask` namespace.
+
+6. Task names: Always use explicit short `$commandName`. Apply known mappings (e.g., `DeleteAllJobsTask → delete-queued-jobs`).
+
+7. Other rules: keep refactors minimal; mark uncertain replacements with `// @TODO (SS6 upgrade)`.
+
+8. Apply these rules to every BuildTask-derived class encountered across all attached files.
+
+9. Make sure the class still extends BuildTask at the end
+
+10. Constraints: Do not invent APIs; preserve original logic; use explicit imports; translate request variables into CLI options.
+
+Output: For every modified file, provide the upgraded SS6 code (clearly label each file). After all code blocks, include a concise explanation of the important changes, reasons, and follow-up checks (e.g., cron jobs or scripts referencing old names).
+

@@ -2,6 +2,7 @@
 
 namespace Sunnysideup\UpgradeSilverstripe\Tasks\IndividualTasks\FiveToSix;
 
+use EasyCodingStandards;
 use Sunnysideup\PHP2CommandLine\PHP2CommandLineSingleton;
 use Sunnysideup\UpgradeSilverstripe\Api\FileSystemFixes;
 use Sunnysideup\UpgradeSilverstripe\Tasks\Helpers\Composer;
@@ -32,40 +33,24 @@ class UpgradeToSilverstripe6 extends Task
     public function runActualTask($params = []): ?string
     {
         $webRoot = $this->mu()->getWebRootDirLocation();
-        $isInstalled = (bool) PHP2CommandLineSingleton::commandExists('sake-lint-rector');
-        $commandAdd = '';
-        if (!$isInstalled) {
-            $commandAdd = 'vendor/bin/';
-            Composer::inst($this->mu())
-                ->RequireDev(
-                    'sunnysideup/easy-coding-standards',
-                    'dev-master',
-                    $this->composerOptions
-                );
-        }
+        EasyCodingStandards::installIfNotInstalled($this->mu());
 
-        //1. apply
+
         foreach ($this->mu()->findNameSpaceAndCodeDirs() as $baseNameSpace => $codeDir) {
             $knownIssuesFileName = $codeDir . '/' . $this->lintingIssuesFileName;
             $relativeDir = str_replace($webRoot, '', $codeDir);
             $relativeDir = ltrim($relativeDir, '/');
             FileSystemFixes::inst($this->mu())
                 ->removeDirOrFile($knownIssuesFileName);
+            $prependCommand = EasyCodingStandards::prependCommand();
             $this->mu()->execMe(
                 $webRoot,
-                $commandAdd . 'sake-lint-rector  -r ./RectorSS6.php   ' . $relativeDir,
+                $prependCommand . 'sake-lint-rector  -r ./RectorSS6.php   ' . $relativeDir,
                 'Apply easy coding standards to ' . $relativeDir . ' (' . $baseNameSpace . ')',
                 false
             );
         }
-        if ($isInstalled) {
-            Composer::inst($this->mu())
-                ->RemoveDev(
-                    'sunnysideup/easy-coding-standards',
-                    'dev-master',
-                    $this->composerOptions
-                );
-        }
+        EasyCodingStandards::removeIfInstalled($this->mu());
         return null;
     }
 
