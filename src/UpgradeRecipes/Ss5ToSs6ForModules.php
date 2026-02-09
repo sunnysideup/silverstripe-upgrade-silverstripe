@@ -70,7 +70,9 @@ class Ss5ToSs6ForModules extends BaseClass
         // 'FinaliseUpgradeWithMergeIntoDefaultBranch' => [
         //     'branchToMergeInto' => 'main',
         // ],
+        'FixBuildTasks' => [
 
+        ]
 
     ];
 

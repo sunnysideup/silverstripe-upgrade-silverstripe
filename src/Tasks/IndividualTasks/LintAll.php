@@ -2,7 +2,7 @@
 
 namespace Sunnysideup\UpgradeSilverstripe\Tasks\IndividualTasks;
 
-use EasyCodingStandards;
+use Sunnysideup\UpgradeSilverstripe\Tasks\Helpers\EasyCodingStandards;
 use Sunnysideup\PHP2CommandLine\PHP2CommandLineSingleton;
 use Sunnysideup\UpgradeSilverstripe\Tasks\Task;
 
