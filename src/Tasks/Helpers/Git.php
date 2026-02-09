@@ -165,37 +165,53 @@ class Git
         return $this;
     }
 
-    public function setDefaultBranchToMain(string $dir): Git
+    public function setDefaultBranchToMain(string $dir, ?string $branchName = 'main'): Git
     {
         $this->fetchAll($dir);
 
-        if (! $this->checkIfBranchExists($dir, 'main')) {
-            echo "Branch main does not exist. Cannot set as default.";
+        if (! $this->checkIfBranchExists($dir, $branchName)) {
+            echo "Branch " . $branchName . " does not exist. Cannot set as default.";
             return $this;
         }
 
         $this->mu()->execMe(
             $dir,
-            'git remote set-head origin main',
-            'set remote default branch to main',
+            'git remote set-head origin ' . $branchName,
+            'set remote default branch to ' . $branchName,
             false
         );
 
         $this->mu()->execMe(
             $dir,
-            'git symbolic-ref HEAD refs/heads/main',
-            'set local HEAD to main',
+            'git symbolic-ref HEAD refs/heads/' . $branchName,
+            'set local HEAD to ' . $branchName,
             false
         );
 
         $repoSlug = $this->normaliseGitHubSlug($this->resolveGitHubRepoSlug($dir));
         if ($repoSlug !== '') {
-            $this->mu()->execMe(
-                $dir,
-                'if command -v gh >/dev/null 2>&1; then gh api ' . escapeshellarg('repos/' . $repoSlug) . ' -X PATCH -F default_branch=main; else echo "GitHub CLI not available - skipped remote default branch update"; fi',
-                'set GitHub remote default branch to main',
-                false
-            );
+            if ($this->currentUserIsAdmin($repoSlug)) {
+                $this->mu()->execMe(
+                    $dir,
+                    'gh api --method PATCH ' . escapeshellarg('/repos/' . $repoSlug) . ' --field default_branch=' . $branchName,
+                    // 'gh api ' . escapeshellarg('/repos/' . $repoSlug) . ' -X PATCH -F default_branch=' . $branchName,
+                    'set GitHub remote default branch to ' . $branchName,
+                    false
+                );
+                $result = $this->mu()->execMeGetReturnString(
+                    $dir,
+                    'gh api ' . escapeshellarg('/repos/' . $repoSlug) . ' --jq \'.default_branch\'',
+                    // 'gh api ' . escapeshellarg('/repos/' . $repoSlug) . ' -X PATCH -F default_branch=' . $branchName,
+                    'set GitHub remote default branch to ' . $branchName,
+                    false
+                );
+                if ($result !== 'main') {
+                    echo "Warning: GitHub API call to set default branch did not return expected result. Expected: 'main', got: '" . $result . "'. Please verify the default branch in the GitHub repository settings.";
+                }
+            } else {
+                echo "Current user does NOT have admin permissions on the repository. Skipping GitHub API call to set default branch.";
+                return $this;
+            }
         } else {
             echo "Could not detect GitHub repository slug. Skipping remote default branch update.";
         }
@@ -205,56 +221,70 @@ class Git
 
     public function createNewBranchIfItDoesNotExist(string $dir, string $newBranchName, string $fromBranchName, ?bool $alsoCheckOutAndMakeDefault = false): Git
     {
-        $this->fetchAll($dir);
-
-        $this->checkoutBranch($dir, $fromBranchName);
-        $this->mu()->execMe(
+        return $this->createNewBranch(
             $dir,
-            '
-            if $(git ls-remote --heads ${REPO} ${BRANCH} | grep -q ' . "'refs/heads/" . $newBranchName . "'" . '); then
-                    echo "branch exists"
-                else
-                    git checkout -b ' . $newBranchName . ' ' . $fromBranchName . '
-                    git push origin ' . $newBranchName . ';
-            fi',
-            'create branch ' . $newBranchName . ' from the ' . $fromBranchName . ' branch in ' . $dir,
-            false
+            $newBranchName,
+            $fromBranchName,
+            $alsoCheckOutAndMakeDefault,
+            true
         );
-        if ($alsoCheckOutAndMakeDefault) {
-            $this->checkoutBranch($dir, $newBranchName);
-        }
-        $this->mu()->execMe(
-            $dir,
-            'git show-ref --verify --quiet refs/heads/' . $newBranchName . ' || git branch ' . $newBranchName . ' origin/' . $newBranchName . ' && git push -u origin ' . $newBranchName,
-            'push it ',
-            false
-        );
-
-        return $this;
     }
 
-    public function createNewBranch(string $dir, string $newBranchName, string $fromBranch, ?bool $alsoCheckOutAndMakeDefault = false): Git
-    {
-        $this->fetchAll($dir);
 
-        $this->checkoutBranch($dir, $fromBranch);
-        $this->mu()->execMe(
-            $dir,
-            'git checkout -b ' . $newBranchName . ' ' . $fromBranch,
-            'create and checkout new branch: ' . $newBranchName . ' from ' . $fromBranch,
-            false
-        );
-        $makeDefault = '';
-        if ($alsoCheckOutAndMakeDefault) {
-            $makeDefault = ' -u ';
-            $this->checkoutBranch($dir, $newBranchName);
+    public function createNewBranch(
+        string $dir,
+        string $newBranchName,
+        string $fromBranchName,
+        ?bool $alsoCheckOutAndMakeDefault = false,
+        ?bool $onlyIfMissing = false
+    ): Git {
+        $this->fetchAll($dir);
+        $this->checkoutBranch($dir, $fromBranchName);
+
+        if ($onlyIfMissing) {
+            $this->mu()->execMe(
+                $dir,
+                '
+            if git show-ref --verify --quiet ' . escapeshellarg('refs/heads/' . $newBranchName) . '; then
+                echo ' . escapeshellarg('local branch exists') . '
+            else
+                if git ls-remote --heads origin ' . escapeshellarg($newBranchName) . ' | grep -q ' . escapeshellarg('refs/heads/' . $newBranchName) . '; then
+                    git fetch origin ' . escapeshellarg($newBranchName) . '
+                    git branch ' . escapeshellarg($newBranchName) . ' ' . escapeshellarg('origin/' . $newBranchName) . '
+                else
+                    git checkout -b ' . escapeshellarg($newBranchName) . ' ' . escapeshellarg($fromBranchName) . '
+                    git push origin ' . escapeshellarg($newBranchName) . '
+                fi
+            fi',
+                'ensure branch exists: ' . $newBranchName . ' from ' . $fromBranchName . ' in ' . $dir,
+                false
+            );
+        } else {
+            $this->mu()->execMe(
+                $dir,
+                'git checkout -b ' . escapeshellarg($newBranchName) . ' ' . escapeshellarg($fromBranchName),
+                'create and checkout new branch: ' . $newBranchName . ' from ' . $fromBranchName,
+                false
+            );
+
+            $this->mu()->execMe(
+                $dir,
+                'git push origin ' . escapeshellarg($newBranchName),
+                'push it',
+                false
+            );
         }
-        $this->mu()->execMe(
-            $dir,
-            'git push ' . $makeDefault . ' origin ' . $newBranchName,
-            'push it ',
-            false
-        );
+
+        if ($alsoCheckOutAndMakeDefault) {
+            $this->checkoutBranch($dir, $newBranchName);
+
+            $this->mu()->execMe(
+                $dir,
+                'git push -u origin ' . escapeshellarg($newBranchName),
+                'set upstream',
+                false
+            );
+        }
 
         return $this;
     }
@@ -307,21 +337,6 @@ class Git
 
         return $this;
     }
-
-    public function deleteBranchRemotely(string $dir, string $branchName): Git
-    {
-        $this->mu()->execMe(
-            $dir,
-            'git ls-remote --exit-code --heads origin ' . escapeshellarg($branchName) .
-                ' > /dev/null 2>&1 && git push origin --delete ' . escapeshellarg($branchName) .
-                ' || true',
-            'delete branch ' . $branchName . ' remotely, if it exists.',
-            false
-        );
-
-        return $this;
-    }
-
     public function fetchAll(string $dir): Git
     {
         $this->mu()->execMe(
@@ -331,6 +346,19 @@ class Git
             false,
             '',
             false //verbose = false!
+        );
+
+        return $this;
+    }
+    public function deleteBranchRemotely(string $dir, string $branchName): Git
+    {
+        $this->mu()->execMe(
+            $dir,
+            'git ls-remote --exit-code --heads origin ' . escapeshellarg($branchName) .
+                ' > /dev/null 2>&1 && git push origin --delete ' . escapeshellarg($branchName) .
+                ' || true',
+            'delete branch ' . $branchName . ' remotely, if it exists.',
+            false
         );
 
         return $this;
@@ -347,6 +375,10 @@ class Git
 
         return $this;
     }
+
+
+
+
 
     public function resolveBranchOrTagToUse(?array $branchesToTryInThisOrder = []): string
     {
@@ -379,7 +411,7 @@ class Git
             return '';
         }
 
-        $output = (string) $this->mu()->execMe(
+        $output = (string) $this->mu()->execMeGetReturnString(
             $this->mu()->getWebRootDirLocation(),
             'git ls-remote --symref ' . escapeshellarg($gitLink) . ' HEAD',
             'detect default branch via remote HEAD',
@@ -403,7 +435,7 @@ class Git
         $candidates = $branchesToTryInThisOrder;
 
         foreach ($candidates as $branch) {
-            $output = (string) $this->mu()->execMe(
+            $output = (string) $this->mu()->execMeGetReturnString(
                 $this->mu()->getWebRootDirLocation(),
                 'git ls-remote --heads ' . escapeshellarg($gitLink) . ' ' . escapeshellarg($branch),
                 'check if branch exists: ' . $branch,
@@ -465,13 +497,7 @@ class Git
             false
         );
 
-        if (is_array($output)) {
-            $originUrl = trim((string) array_pop($output));
-        } else {
-            $originUrl = trim((string) $output);
-        }
-
-        return $originUrl;
+        return trim((string) array_pop($output));
     }
 
     protected function extractGitHubSlugFromUrl(string $url): string
@@ -490,5 +516,27 @@ class Git
         }
 
         return '';
+    }
+
+    protected function getCurrentUser(): string
+    {
+        return $this->mu()->execMeGetReturnString(
+            $this->mu()->getWebRootDirLocation(),
+            'gh api user --jq \'.login\'',
+            'determine current git user',
+            false
+        );
+    }
+
+    protected function currentUserIsAdmin($repoSlug): bool
+    {
+        $user = $this->getCurrentUser();
+        $answer = $this->mu()->execMeGetReturnString(
+            $this->mu()->getWebRootDirLocation(),
+            'gh api /repos/' . $repoSlug . '/collaborators/' . $user . '/permission | jq -r \'.permission\'',
+            'determine if current git user is admin',
+            false
+        );
+        return $answer === 'admin';
     }
 }

@@ -17,7 +17,7 @@ abstract class LLMFixTask extends Task
 {
     protected $taskStep = 'ANY';
 
-    abstract protected string $llmInstruction = '';
+    protected string $llmInstruction;
 
     /**
      *
@@ -30,7 +30,7 @@ abstract class LLMFixTask extends Task
      * ```
      * @var array
      */
-    abstract protected array $llmFileSelection = [];
+    protected array $llmFileSelection;
     protected string $alternativePathToLLMInstruction = '';
 
     abstract public function getTitle(): string;

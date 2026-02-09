@@ -104,6 +104,13 @@ class ModuleUpgraderBaseWithVariables implements ModuleUpgraderInterface
      */
     protected $runLastOneAgain = false;
 
+
+    /**
+     * Do we only get the status?
+     * @var bool
+     */
+    protected $getStatusOnly = false;
+
     /**
      * command that is currently running
      * @var string

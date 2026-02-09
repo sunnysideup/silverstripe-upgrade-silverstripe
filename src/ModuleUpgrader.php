@@ -31,7 +31,7 @@ class ModuleUpgrader extends ModuleUpgraderBaseWithVariables
         ?bool $alwaysRun = false,
         ?string $keyNotesLogFileLocation = '',
         ?bool $verbose = true
-    ) {
+    ): array {
         if ($keyNotesLogFileLocation) {
             $this->commandLineExec
                 ->setMakeKeyNotes(true)
@@ -50,6 +50,29 @@ e.g. php runme.php startFrom=' . $this->currentlyRunning . '
             ');
         }
         return $this->commandLineExec->execMe($newDir, $command, $comment, $alwaysRun, $verbose);
+    }
+
+    /**
+     * Executes given operations on the PHP2CommandLineSingleton instance
+     * Documentation for this can be found in the PHP2CommandLineSingleton module
+     *
+     * @param  string  $newDir                  root dir for ommand
+     * @param  string  $command                 actual command
+     * @param  string  $comment                 comment
+     * @param  boolean $alwaysRun               run even if you are just preparing a real run. Default FALSE
+     *
+     * @return string
+     */
+    public function execMeGetReturnString(
+        string $newDir,
+        string $command,
+        string $comment,
+        ?bool $alwaysRun = false,
+        ?string $keyNotesLogFileLocation = '',
+        ?bool $verbose = true
+    ): string {
+        $output = $this->execMe($newDir, $command, $comment, $alwaysRun, $keyNotesLogFileLocation, $verbose);
+        return implode("\n", array_filter(array_filter($output, 'trim')));
     }
 
     /**
@@ -122,6 +145,10 @@ e.g. php runme.php startFrom=' . $this->currentlyRunning . '
                         $this->colourPrint('# ' . $obj->getDescriptionNice(), 'light_green');
                         $this->colourPrint('# --------------------', 'light_green');
                         // run it!!!
+                        if ($this->getStatusOnly) {
+                            $this->colourPrint('# status only - not running', 'yellow');
+                            continue;
+                        }
                         $obj->run();
                         if ($this->runInteractively) {
                             $hasRun = true;
@@ -191,21 +218,26 @@ e.g. php runme.php startFrom=' . $this->currentlyRunning . '
 
     protected function loadNextStepInstructions()
     {
-        $this->restartSession = $this->getCommandLineOrArgumentAsBoolean('restart');
-        $this->runLastOneAgain = $this->getCommandLineOrArgumentAsBoolean('again');
-        if ($this->getCommandLineOrArgumentAsString('startFrom')) {
-            $this->startFrom = $this->getCommandLineOrArgumentAsString('startFrom');
-            if ($this->runInteractively) {
-                $this->onlyRun = $this->getCommandLineOrArgumentAsString('startFrom');
-            }
-        }
-        if ($this->getCommandLineOrArgumentAsString('endWith')) {
-            $this->endWith = $this->getCommandLineOrArgumentAsString('endWith');
-        }
-        if ($this->getCommandLineOrArgumentAsString('task')) {
+        $this->getStatusOnly = $this->getCommandLineOrArgumentAsBoolean('status');
+        if ($this->getStatusOnly) {
             $this->runInteractively = true;
-            $this->onlyRun = $this->getCommandLineOrArgumentAsString('task');
-            $this->outOfOrderTask = true;
+        } else {
+            $this->restartSession = $this->getCommandLineOrArgumentAsBoolean('restart');
+            $this->runLastOneAgain = $this->getCommandLineOrArgumentAsBoolean('again');
+            if ($this->getCommandLineOrArgumentAsString('startFrom')) {
+                $this->startFrom = $this->getCommandLineOrArgumentAsString('startFrom');
+                if ($this->runInteractively) {
+                    $this->onlyRun = $this->getCommandLineOrArgumentAsString('startFrom');
+                }
+            }
+            if ($this->getCommandLineOrArgumentAsString('endWith')) {
+                $this->endWith = $this->getCommandLineOrArgumentAsString('endWith');
+            }
+            if ($this->getCommandLineOrArgumentAsString('task')) {
+                $this->runInteractively = true;
+                $this->onlyRun = $this->getCommandLineOrArgumentAsString('task');
+                $this->outOfOrderTask = true;
+            }
         }
     }
 

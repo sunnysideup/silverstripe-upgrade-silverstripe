@@ -59,7 +59,8 @@ After that, it replaces master with main as the branch name.';
                 );
             Git::inst($this->mu())
                 ->setDefaultBranchToMain(
-                    $this->mu()->getGitRootDir()
+                    $this->mu()->getGitRootDir(),
+                    'main'
                 );
             Git::inst($this->mu())
                 ->fetchAll(
