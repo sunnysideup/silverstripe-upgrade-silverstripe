@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Sunnysideup\UpgradeSilverstripe\Tasks\IndividualTasks\FiveToSix;
+namespace Sunnysideup\UpgradeSilverstripe\Tasks\IndividualTasks;
 
 use EasyCodingStandards;
 use Sunnysideup\PHP2CommandLine\PHP2CommandLineSingleton;
@@ -17,8 +17,8 @@ abstract class LLMFixTask extends Task
 {
     protected $taskStep = 'ANY';
 
-    abstract protected string $llmInstruction = '';
-    abstract protected string $llmFileSelection = '';
+    protected string $llmInstruction = '';
+    protected string $llmFileSelection = '';
     protected string $alternativePathToLLMInstruction = '';
 
     abstract public function getTitle(): string;

@@ -165,6 +165,44 @@ class Git
         return $this;
     }
 
+    public function setDefaultBranchToMain(string $dir): Git
+    {
+        $this->fetchAll($dir);
+
+        if (! $this->checkIfBranchExists($dir, 'main')) {
+            echo "Branch main does not exist. Cannot set as default.";
+            return $this;
+        }
+
+        $this->mu()->execMe(
+            $dir,
+            'git remote set-head origin main',
+            'set remote default branch to main',
+            false
+        );
+
+        $this->mu()->execMe(
+            $dir,
+            'git symbolic-ref HEAD refs/heads/main',
+            'set local HEAD to main',
+            false
+        );
+
+        $repoSlug = $this->normaliseGitHubSlug($this->resolveGitHubRepoSlug($dir));
+        if ($repoSlug !== '') {
+            $this->mu()->execMe(
+                $dir,
+                'if command -v gh >/dev/null 2>&1; then gh api ' . escapeshellarg('repos/' . $repoSlug) . ' -X PATCH -F default_branch=main; else echo "GitHub CLI not available - skipped remote default branch update"; fi',
+                'set GitHub remote default branch to main',
+                false
+            );
+        } else {
+            echo "Could not detect GitHub repository slug. Skipping remote default branch update.";
+        }
+
+        return $this;
+    }
+
     public function createNewBranchIfItDoesNotExist(string $dir, string $newBranchName, string $fromBranchName, ?bool $alsoCheckOutAndMakeDefault = false): Git
     {
         $this->fetchAll($dir);
@@ -375,6 +413,80 @@ class Git
             if (trim($output) !== '') {
                 return $branch;
             }
+        }
+
+        return '';
+    }
+
+    protected function resolveGitHubRepoSlug(string $dir = ''): string
+    {
+        $candidateUrls = [];
+        if ($dir !== '') {
+            $originUrl = $this->determineOriginUrl($dir);
+            if ($originUrl !== '') {
+                $candidateUrls[] = $originUrl;
+            }
+        }
+        $gitLink = trim((string) $this->mu()->getGitLink());
+        if ($gitLink !== '') {
+            $candidateUrls[] = $gitLink;
+        }
+        $httpsLink = trim((string) $this->mu()->getGitLinkAsHTTPS());
+        if ($httpsLink !== '') {
+            $candidateUrls[] = $httpsLink;
+        }
+
+        foreach ($candidateUrls as $url) {
+            $slug = $this->extractGitHubSlugFromUrl($url);
+            if ($slug !== '') {
+                return $slug;
+            }
+        }
+
+        return '';
+    }
+
+    protected function normaliseGitHubSlug(string $slug): string
+    {
+        $slug = trim($slug);
+        if ($slug === '') {
+            return '';
+        }
+
+        return preg_replace('/\.git$/i', '', $slug) ?? '';
+    }
+
+    protected function determineOriginUrl(string $dir): string
+    {
+        $output = $this->mu()->execMe(
+            $dir,
+            'git config --get remote.origin.url',
+            'determine origin url',
+            false
+        );
+
+        if (is_array($output)) {
+            $originUrl = trim((string) array_pop($output));
+        } else {
+            $originUrl = trim((string) $output);
+        }
+
+        return $originUrl;
+    }
+
+    protected function extractGitHubSlugFromUrl(string $url): string
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+
+        if (preg_match('#github\.com[:/]{1}([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+?)(?:\.git)?$#', $url, $matches)) {
+            return $this->normaliseGitHubSlug($matches[1] ?? '');
+        }
+
+        if (preg_match('#git@github\.com:([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+?)(?:\.git)?$#', $url, $matches)) {
+            return $this->normaliseGitHubSlug($matches[1] ?? '');
         }
 
         return '';

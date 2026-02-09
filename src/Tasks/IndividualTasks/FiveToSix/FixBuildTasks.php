@@ -9,6 +9,7 @@ use Sunnysideup\PHP2CommandLine\PHP2CommandLineSingleton;
 use Sunnysideup\UpgradeSilverstripe\Api\FileSystemFixes;
 use Sunnysideup\UpgradeSilverstripe\Tasks\Helpers\Composer;
 use Sunnysideup\UpgradeSilverstripe\Tasks\Task;
+use Sunnysideup\UpgradeSilverstripe\Tasks\IndividualTasks\LLMFixTask;
 
 /**
  * Adds a new branch to your repository that is going to be used for upgrading it.
