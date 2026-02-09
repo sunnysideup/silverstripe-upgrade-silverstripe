@@ -18,7 +18,10 @@ class FixBuildTasks extends LLMFixTask
     protected $taskStep = 'SS5->SS6';
 
     protected string $llmInstruction = 'SS6/FixBuildTasks.txt';
-    protected string $llmFileSelection = './**/Tasks/*.php';
+    protected array $llmFileSelection = [
+        './**/*.php' => 'extends BuildTask'
+    ];
+
     protected string $alternativePathToLLMInstruction = '';
 
     public function getTitle(): string

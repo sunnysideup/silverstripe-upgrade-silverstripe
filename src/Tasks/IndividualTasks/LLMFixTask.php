@@ -18,7 +18,19 @@ abstract class LLMFixTask extends Task
     protected $taskStep = 'ANY';
 
     abstract protected string $llmInstruction = '';
-    abstract protected string $llmFileSelection = '';
+
+    /**
+     *
+     * works like this:
+     * ```php
+     * [
+     *     './**\/*.php' => 'getCMSFields',
+     *     './**\/*.php' => 'updateCMSFields',
+     * ]
+     * ```
+     * @var array
+     */
+    abstract protected array $llmFileSelection = [];
     protected string $alternativePathToLLMInstruction = '';
 
     abstract public function getTitle(): string;
@@ -29,8 +41,8 @@ abstract class LLMFixTask extends Task
         if (!$this->llmInstruction) {
             throw new \Exception('No LLM Instruction has been set - set something like SS5/CleanUpSomething.txt');
         }
-        if (! $this->llmFileSelection) {
-            throw new \Exception('No LLM File Selection has been set - set something like ./**/SomeFolder/*.php');
+        if (empty($this->llmFileSelection)) {
+            throw new \Exception('No LLM File Selection has been set - set something like ./**/SomeFolder/*.php => getCMSFields');
         }
         $path = $this->alternativePathToLLMInstruction ?: $this->defaultPathForLLMInstruction();
         $prompt = $path . DIRECTORY_SEPARATOR . $this->llmInstruction;
@@ -38,14 +50,25 @@ abstract class LLMFixTask extends Task
             throw new \Exception('LLM Instruction file not found: ' . $prompt);
         }
         EasyCodingStandards::installIfNotInstalled($this->mu());
-        foreach ($this->mu()->getExistingModuleDirLocations() as $moduleDir) {
-            $this->mu()->execMe(
-                $this->mu()->getWebRootDirLocation(),
-                EasyCodingStandards::prependCommand() . 'sake-llm-opencode ' . $moduleDir . ' --prompt=' . $prompt,
-                'Fixing Build Tasks in ' . $moduleDir,
-                true
-            );
+        foreach ($this->llmFileSelection as $filePattern => $method) {
+            foreach ($this->mu()->getExistingModuleDirLocations() as $moduleDir) {
+                $command = EasyCodingStandards::prependCommand() . 'sake-llm-opencode ' .
+                    $moduleDir .
+                    ' --files=' . escapeshellarg($filePattern) .
+                    ' --prompt=' . $prompt;
+                if ($method) {
+                    $command .=
+                        ' --contains=' . escapeshellarg($method);
+                }
+                $this->mu()->execMe(
+                    $this->mu()->getWebRootDirLocation(),
+                    $command,
+                    'Fixing files ' . $filePattern . ' in ' . $moduleDir . ' containing "' . $method . '"',
+                    true
+                );
+            }
         }
+
         EasyCodingStandards::removeIfInstalled($this->mu());
         return null;
     }
