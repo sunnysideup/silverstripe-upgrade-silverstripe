@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Sunnysideup\UpgradeSilverstripe\Tasks\IndividualTasks\FiveToSix;
 
-use EasyCodingStandards;
+use Sunnysideup\UpgradeSilverstripe\Tasks\Helpers\EasyCodingStandards;
 use Sunnysideup\PHP2CommandLine\PHP2CommandLineSingleton;
 use Sunnysideup\UpgradeSilverstripe\Api\FileSystemFixes;
 use Sunnysideup\UpgradeSilverstripe\Tasks\Helpers\Composer;

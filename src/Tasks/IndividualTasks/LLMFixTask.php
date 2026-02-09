@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Sunnysideup\UpgradeSilverstripe\Tasks\IndividualTasks;
 
-use EasyCodingStandards;
+use Sunnysideup\UpgradeSilverstripe\Tasks\Helpers\EasyCodingStandards;
 use Sunnysideup\PHP2CommandLine\PHP2CommandLineSingleton;
 use Sunnysideup\UpgradeSilverstripe\Api\FileSystemFixes;
 use Sunnysideup\UpgradeSilverstripe\Tasks\Helpers\Composer;
@@ -41,7 +41,7 @@ abstract class LLMFixTask extends Task
         foreach ($this->mu()->getExistingModuleDirLocations() as $moduleDir) {
             $this->mu()->execMe(
                 $this->mu()->getWebRootDirLocation(),
-                EasyCodingStandards::prependCommand() . 'sake-llm-opencode ' . $moduleDir . ' --prompt=' . $prompt,
+                EasyCodingStandards::prependCommand() . 'sake-llm-opencode ' . $moduleDir . ' --prompt=' . $prompt . ' --files='. escapeshellarg($this->llmFileSelection),
                 'Fixing Build Tasks in ' . $moduleDir,
                 true
             );

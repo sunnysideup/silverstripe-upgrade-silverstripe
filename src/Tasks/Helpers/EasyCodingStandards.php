@@ -1,5 +1,7 @@
 <?php
 
+namespace Sunnysideup\UpgradeSilverstripe\Tasks\Helpers;
+
 use Sunnysideup\PHP2CommandLine\PHP2CommandLineSingleton;
 use Sunnysideup\UpgradeSilverstripe\Tasks\Helpers\Composer;
 
