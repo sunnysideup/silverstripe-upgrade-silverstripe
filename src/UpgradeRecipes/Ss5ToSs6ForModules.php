@@ -42,6 +42,8 @@ class Ss5ToSs6ForModules extends BaseClass
             'version' => '8.3',
             'alsoReinstallWithComposer' => false,
         ],
+        // Fork the repository if not admin
+        'ForkRepository' => [],
         'CheckoutDefaultBranch-1' => [
             'clearCache' => false,
         ],
@@ -73,7 +75,8 @@ class Ss5ToSs6ForModules extends BaseClass
         'FixBuildTasks' => [
 
         ]
-
+        // Commit etc.
+        // Pull request if fork
     ];
 
     protected $frameworkComposerRestraint = '~5@stable';
