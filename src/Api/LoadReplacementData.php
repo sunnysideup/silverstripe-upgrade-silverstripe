@@ -2,8 +2,6 @@
 
 namespace Sunnysideup\UpgradeSilverstripe\Api;
 
-use SilverStripe\Upgrader\Util\ConfigFile;
-
 /**
  * loads yml data if strings to replace in
  * code.
@@ -22,6 +20,7 @@ use SilverStripe\Upgrader\Util\ConfigFile;
  */
 
 use Sunnysideup\UpgradeSilverstripe\ModuleUpgrader;
+use Symfony\Component\Yaml\Yaml;
 
 class LoadReplacementData
 {
@@ -161,8 +160,12 @@ class LoadReplacementData
         foreach ($this->paths as $path) {
             $file = $path . DIRECTORY_SEPARATOR . $this->toFolder . DIRECTORY_SEPARATOR . $this->ymlFileName;
             if (file_exists($file)) {
-                //@todo: fix to work with ConfigFile class (see silverstripe upgrader)
-                $nextConfig = ConfigFile::loadConfig($file);
+                if (file_exists($file)) {
+                    $nextConfig = Yaml::parse(file_get_contents(realpath($file)));
+                }
+                else {
+                    $nextConfig = [];
+                }
                 // Merge
                 $config = $this->mergeConfig($config, $nextConfig);
                 $this->mu()->colourPrint('loaded replacement file: ' . $file);
