@@ -75,7 +75,8 @@ class Ss5ToSs6ForModules extends BaseClass
         // ],
         'FixBuildTasks' => [
 
-        ]
+        ],
+        'PullRequest' => []
         // Commit etc.
         // Pull request if fork
     ];

@@ -42,6 +42,11 @@ class ModuleUpgraderInfo
         }
         $mu->colourPrint('- Current User Admin: ' . $adminLabel, 'light_cyan');
 
+        $prUrl = trim($mu->getSessionManager()->getSessionValue('PullRequestUrl'));
+        if ($prUrl !== '') {
+            $mu->colourPrint('- Last Pull Request: ' . $prUrl, 'light_cyan');
+        }
+
         $mu->colourPrint('- Run Interactively: ' . ($mu->getRunInteractively() ? 'yes' : 'no'), 'light_cyan');
 
         $mu->colourPrint('- Run Irreversibly: ' . ($mu->getRunIrreversibly() ? 'yes' : 'no'), 'light_cyan');
