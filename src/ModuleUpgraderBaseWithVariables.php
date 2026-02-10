@@ -730,6 +730,70 @@ class ModuleUpgraderBaseWithVariables implements ModuleUpgraderInterface
         return $location;
     }
 
+    /**
+     * Returns true when we should operate on a forked repository instead of upstream.
+     * Persists the decision in the session file so repeated CLI runs share the same state.
+     */
+    public function getUpgradeAsFork(): bool
+    {
+        $sessionValue = $this->readBoolFromSession('UpgradeAsFork');
+        if ($sessionValue !== null) {
+            $this->upgradeAsFork = $sessionValue;
+        }
+
+        return (bool) $this->upgradeAsFork;
+    }
+
+    /**
+     * @return $this
+     */
+    public function setUpgradeAsFork(bool $upgradeAsFork)
+    {
+        $upgradeAsFork = (bool) $upgradeAsFork;
+        if ($this->upgradeAsFork === $upgradeAsFork) {
+            // Keep the persisted session value in sync even if nothing changed in memory.
+            $this->writeBoolToSession('UpgradeAsFork', $upgradeAsFork);
+            return $this;
+        }
+
+        $this->upgradeAsFork = $upgradeAsFork;
+        $this->writeBoolToSession('UpgradeAsFork', $upgradeAsFork);
+
+        return $this;
+    }
+
+    /**
+     * Returns null until we know whether the current GitHub user is an admin on the upstream repo.
+     */
+    public function getCurrentUserIsAdmin(): ?bool
+    {
+        if ($this->currentUserIsAdmin === null) {
+            $sessionValue = $this->readBoolFromSession('CurrentUserIsAdmin');
+            if ($sessionValue !== null) {
+                $this->currentUserIsAdmin = $sessionValue;
+            }
+        }
+
+        return $this->currentUserIsAdmin;
+    }
+
+    /**
+     * @return $this
+     */
+    public function setCurrentUserIsAdmin(?bool $isAdmin)
+    {
+        if ($this->currentUserIsAdmin === $isAdmin) {
+            // Session may have been cleared externally; ensure we persist the current state.
+            $this->writeBoolToSession('CurrentUserIsAdmin', $isAdmin);
+            return $this;
+        }
+
+        $this->currentUserIsAdmin = $isAdmin;
+        $this->writeBoolToSession('CurrentUserIsAdmin', $isAdmin);
+
+        return $this;
+    }
+
     public function getIsModuleUpgradeNice(): string
     {
         return $this->getIsModuleUpgrade() ? 'module upgrade' : 'website project upgrade';
@@ -785,6 +849,49 @@ class ModuleUpgraderBaseWithVariables implements ModuleUpgraderInterface
             }
         }
         return $link;
+    }
+
+    protected function readBoolFromSession(string $key): ?bool
+    {
+        if ($this->vendorNamespace === '' || $this->packageNamespace === '') {
+            return null;
+        }
+        try {
+            $value = $this->getSessionManager()->getSessionValue($key);
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return $this->convertStringToBool($value);
+    }
+
+    protected function writeBoolToSession(string $key, ?bool $value): void
+    {
+        if ($this->vendorNamespace === '' || $this->packageNamespace === '') {
+            return;
+        }
+        try {
+            $encoded = $value === null ? '' : ($value ? '1' : '0');
+            $this->getSessionManager()->setSessionValue($key, $encoded);
+        } catch (\Throwable $e) {
+            // Unable to persist session information; ignore and continue.
+        }
+    }
+
+    protected function convertStringToBool(?string $value): ?bool
+    {
+        $value = strtolower(trim((string) $value));
+        if ($value === '' || $value === 'null') {
+            return null;
+        }
+        if (in_array($value, ['1', 'true', 'yes', 'y'], true)) {
+            return true;
+        }
+        if (in_array($value, ['0', 'false', 'no', 'n'], true)) {
+            return false;
+        }
+
+        return null;
     }
 
     /**

@@ -354,7 +354,12 @@ e.g. php runme.php startFrom=' . $this->currentlyRunning . '
         }
 
         //UpgradeAsFork
-        $this->upgradeAsFork = empty($moduleDetails['UpgradeAsFork']) ? false : true;
+        if (array_key_exists('UpgradeAsFork', $moduleDetails)) {
+            $this->setUpgradeAsFork(! empty($moduleDetails['UpgradeAsFork']));
+        } else {
+            // Ensure in-memory value matches any previously stored session value.
+            $this->getUpgradeAsFork();
+        }
 
         //NameOfBranchForBaseCode
         $this->nameOfBranchForBaseCode = $moduleDetails['NameOfBranchForBaseCode'] ?? $this->nameOfBranchForBaseCode;
