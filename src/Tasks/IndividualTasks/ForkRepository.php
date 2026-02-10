@@ -81,6 +81,8 @@ the task is skipped. Authenticate gh first so forks can be created when needed.'
 
         $forkSlug = $forkOwner . '/' . $repoName;
 
+        $this->recordForkMetadata($sourceSlug, $forkSlug, $originalGitLink);
+
         if (! $this->forkExists($forkSlug)) {
             $this->createFork($sourceSlug, $forkSlug);
         } else {
@@ -91,7 +93,10 @@ the task is skipped. Authenticate gh first so forks can be created when needed.'
         $forkHttps = 'https://github.com/' . $forkSlug;
         $forkRaw = 'https://raw.githubusercontent.com/' . $forkSlug;
 
-        $this->recordOriginalGitLink($originalGitLink);
+        $session = $this->mu()->getSessionManager();
+        $session->setSessionValue('ForkRepositoryForkGitLink', $forkSsh);
+        $session->setSessionValue('ForkRepositoryForkGitLinkHTTPS', $forkHttps);
+        $session->setSessionValue('ForkRepositoryForkGitLinkRAW', $forkRaw);
 
         $this->mu()
             ->setGitLink($forkSsh)
@@ -149,9 +154,12 @@ the task is skipped. Authenticate gh first so forks can be created when needed.'
         );
     }
 
-    protected function recordOriginalGitLink(string $originalGitLink): void
+    protected function recordForkMetadata(string $originalSlug, string $forkSlug, string $originalGitLink): void
     {
-        $this->mu()->getSessionManager()->setSessionValue('ForkRepositoryOriginalGitLink', $originalGitLink);
+        $session = $this->mu()->getSessionManager();
+        $session->setSessionValue('ForkRepositoryOriginalSlug', $originalSlug);
+        $session->setSessionValue('ForkRepositoryForkSlug', $forkSlug);
+        $session->setSessionValue('ForkRepositoryOriginalGitLink', $originalGitLink);
     }
 
     protected function rewireLocalRemotes(string $forkSsh, string $upstreamSsh): void
