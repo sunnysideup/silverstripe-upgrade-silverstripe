@@ -450,7 +450,7 @@ class Git
         return '';
     }
 
-    protected function resolveGitHubRepoSlug(string $dir = ''): string
+    public function resolveGitHubRepoSlug(string $dir = ''): string
     {
         $candidateUrls = [];
         if ($dir !== '') {
@@ -528,7 +528,7 @@ class Git
         );
     }
 
-    protected function currentUserIsAdmin($repoSlug): bool
+    public function currentUserIsAdmin($repoSlug): bool
     {
         $user = $this->getCurrentUser();
         $answer = $this->mu()->execMeGetReturnString(

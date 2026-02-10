@@ -43,6 +43,7 @@ class Ss5ToSs6ForModules extends BaseClass
             'alsoReinstallWithComposer' => false,
         ],
         // Fork the repository if not admin
+        'CheckRepositoryPermissions' => [],
         'ForkRepository' => [],
         'CheckoutDefaultBranch-1' => [
             'clearCache' => false,

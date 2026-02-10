@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunnysideup\UpgradeSilverstripe\Tasks\IndividualTasks;
 
+use Sunnysideup\UpgradeSilverstripe\Tasks\Helpers\Git;
 use Sunnysideup\UpgradeSilverstripe\Tasks\Task;
 
 /**
@@ -28,7 +29,7 @@ class ForkRepository extends Task
         return 'This step only executes when upgradeAsFork=true. It ensures the current
 upgrade run operates from a personal fork rather than the upstream repository.
 If you already have permission to push to the source repo or upgradeAsFork=false,
-create forks and that any required credentials are available before running it.';
+the task is skipped. Authenticate gh first so forks can be created when needed.';
     }
 
     /**
@@ -49,9 +50,19 @@ create forks and that any required credentials are available before running it.'
             return 'No git link configured for this module, cannot create fork.';
         }
 
-        $sourceSlug = $this->detectGitHubSlug();
+        $gitHelper = Git::inst($this->mu());
+        $sourceSlug = $gitHelper->resolveGitHubRepoSlug();
         if ($sourceSlug === '') {
             return 'ForkRepository currently only supports GitHub remotes. Unable to parse slug from ' . $originalGitLink;
+        }
+
+        $currentAdmin = $this->mu()->getCurrentUserIsAdmin();
+        if ($currentAdmin === null) {
+            $currentAdmin = $gitHelper->currentUserIsAdmin($sourceSlug);
+            $this->mu()->setCurrentUserIsAdmin($currentAdmin);
+        }
+        if ($currentAdmin === true) {
+            $this->mu()->colourPrint('Admin rights detected; forking only because upgradeAsFork=true.', 'light_cyan');
         }
 
         $delimiterPos = strpos($sourceSlug, '/');
@@ -95,33 +106,6 @@ create forks and that any required credentials are available before running it.'
     protected function hasCommitAndPush()
     {
         return false;
-    }
-
-    protected function detectGitHubSlug(): string
-    {
-        $candidates = [
-            trim((string) $this->mu()->getGitLink()),
-            trim((string) $this->mu()->getGitLinkAsHTTPS()),
-        ];
-
-        foreach ($candidates as $candidate) {
-            if ($candidate === '') {
-                continue;
-            }
-            if (preg_match('#github\\.com[:/]{1}([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+?)(?:\\.git)?$#', $candidate, $matches)) {
-                return $this->normaliseSlug($matches[1] ?? '');
-            }
-            if (preg_match('#git@github\\.com:([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+?)(?:\\.git)?$#', $candidate, $matches)) {
-                return $this->normaliseSlug($matches[1] ?? '');
-            }
-        }
-
-        return '';
-    }
-
-    protected function normaliseSlug(string $slug): string
-    {
-        return preg_replace('/\\.git$/i', '', trim($slug)) ?? '';
     }
 
     protected function determineGitHubUser(): string

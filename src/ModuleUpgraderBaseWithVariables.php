@@ -296,6 +296,13 @@ class ModuleUpgraderBaseWithVariables implements ModuleUpgraderInterface
      */
     protected $upgradeAsFork = false;
 
+    /**
+     * Stores whether the authenticated GitHub user has admin access to the upstream repository.
+     * Null = unknown/not checked yet.
+     * @var bool|null
+     */
+    protected ?bool $currentUserIsAdmin = null;
+
     #########################################
     # COMPOSER
     #########################################

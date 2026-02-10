@@ -33,6 +33,15 @@ class ModuleUpgraderInfo
 
         $mu->colourPrint('- Upgrade as Fork: ' . ($mu->getUpgradeAsFork() ? 'yes' : 'no'), 'light_cyan');
 
+        $adminStatus = $mu->getCurrentUserIsAdmin();
+        $adminLabel = 'unknown';
+        if ($adminStatus === true) {
+            $adminLabel = 'yes';
+        } elseif ($adminStatus === false) {
+            $adminLabel = 'no';
+        }
+        $mu->colourPrint('- Current User Admin: ' . $adminLabel, 'light_cyan');
+
         $mu->colourPrint('- Run Interactively: ' . ($mu->getRunInteractively() ? 'yes' : 'no'), 'light_cyan');
 
         $mu->colourPrint('- Run Irreversibly: ' . ($mu->getRunIrreversibly() ? 'yes' : 'no'), 'light_cyan');
