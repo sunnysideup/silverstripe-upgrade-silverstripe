@@ -42,7 +42,7 @@ class Ss4ToSs5FindAndReplaceOnlyModule extends BaseClass
             'version' => '8.3',
         ],
         'CheckoutDefaultBranch-1' => [
-            'branchOrTagToUse' => 'develop',
+            'branchOrTagToUse' => 'main',
         ],
 
         'BranchesAddTempUpgradeBranch' => [],
