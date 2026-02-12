@@ -38,6 +38,7 @@ class GitHubWorkflow extends BaseClass
         ],
         'BranchAddUpgradeStarterBranch' => [],
         'CheckoutTempUpgradeBranch' => [],
+        'TestCommit' => [],
         'CheckRepositoryPermissions' => [],
         'ForkRepository' => [],
         'PullRequest' => [],
