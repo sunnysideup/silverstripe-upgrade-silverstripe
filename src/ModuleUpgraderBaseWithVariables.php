@@ -9,6 +9,7 @@ use Sunnysideup\UpgradeSilverstripe\Interfaces\SessionManagementInterface;
 use Sunnysideup\UpgradeSilverstripe\Traits\GettersAndSetters;
 use Sunnysideup\UpgradeSilverstripe\Traits\HelperInst;
 use Sunnysideup\UpgradeSilverstripe\Traits\Misc;
+use Sunnysideup\UpgradeSilverstripe\TestRecipes\GitHubWorkflow;
 use Sunnysideup\UpgradeSilverstripe\UpgradeRecipes\ApplyNamespacing;
 use Sunnysideup\UpgradeSilverstripe\UpgradeRecipes\Ss33ToSs37;
 use Sunnysideup\UpgradeSilverstripe\UpgradeRecipes\Ss35ToSs37;
@@ -51,6 +52,7 @@ class ModuleUpgraderBaseWithVariables implements ModuleUpgraderInterface
         'SS5-SEARCH-REPLACE-ONLY' => Ss4ToSs5FindAndReplaceOnly::class,
         'SS5-SEARCH-REPLACE-ONLY-MODULE' => Ss4ToSs5FindAndReplaceOnlyModule::class,
         'SS6-MODULES' => Ss5ToSs6ForModules::class,
+        'TEST-GITHUB' => GitHubWorkflow::class,
     ];
 
     #########################################

@@ -32,6 +32,8 @@ open a GitHub pull request back to the upstream repository using gh CLI.';
 
     public function runActualTask($params = []): ?string
     {
+        $this->hydrateForkModeFromSession();
+
         if (! $this->mu()->getUpgradeAsFork()) {
             $this->mu()->colourPrint('Skipping PR creation: upgradeAsFork=false', 'yellow');
             return null;
@@ -56,8 +58,14 @@ open a GitHub pull request back to the upstream repository using gh CLI.';
             return 'Cannot locate local git repository at ' . $gitRootDir;
         }
 
-        $sourceBranch = $this->resolveSourceBranch();
+        $sourceBranch = $this->resolveSourceBranch($gitRootDir);
+        if ($sourceBranch === '') {
+            return 'Unable to determine source branch for pull request.';
+        }
         $targetBranch = $this->resolveTargetBranch();
+        if ($targetBranch === '') {
+            return 'Unable to determine target branch for pull request.';
+        }
 
         $this->ensureRemote($gitRootDir, 'origin', $forkGitLink);
         $this->ensureRemote($gitRootDir, 'upstream', $originalGitLink);
@@ -69,7 +77,17 @@ open a GitHub pull request back to the upstream repository using gh CLI.';
             return 'Source branch ' . $sourceBranch . ' not found in local repository. Cannot open PR.';
         }
 
+        $this->checkoutBranch($gitRootDir, $sourceBranch);
         $this->pushSourceBranch($gitRootDir, $sourceBranch);
+
+        // check that the branch exists on the remote now
+        if (! $this->remoteBranchExists($gitRootDir, 'origin', $sourceBranch)) {
+            return 'Branch push may have failed: origin/' . $sourceBranch . ' not found after push.';
+        }
+
+        if (! $this->hasCommitsComparedToBase($gitRootDir, $sourceBranch, $targetBranch)) {
+            return 'No commits between ' . $targetBranch . ' and ' . $sourceBranch . '. Nothing to open a PR with.';
+        }
 
         $existing = $this->findExistingPr($gitRootDir, $originalSlug, $targetBranch, $forkSlug, $sourceBranch);
         if ($existing !== '') {
@@ -97,6 +115,23 @@ open a GitHub pull request back to the upstream repository using gh CLI.';
         return false;
     }
 
+    protected function hydrateForkModeFromSession(): void
+    {
+        $session = $this->mu()->getSessionManager();
+        $forkGitLink = trim((string) $session->getSessionValue('ForkRepositoryForkGitLink'));
+        $forkSlug = trim((string) $session->getSessionValue('ForkRepositoryForkSlug'));
+        $originalSlug = trim((string) $session->getSessionValue('ForkRepositoryOriginalSlug'));
+
+        if ($forkGitLink === '' || $forkSlug === '' || $originalSlug === '') {
+            return;
+        }
+
+        if (! $this->mu()->getUpgradeAsFork()) {
+            $this->mu()->colourPrint('Fork metadata found in session; enabling fork workflow.', 'light_cyan');
+            $this->mu()->setUpgradeAsFork(true);
+        }
+    }
+
     protected function ghCliAvailable(): bool
     {
         $result = trim(
@@ -113,7 +148,7 @@ open a GitHub pull request back to the upstream repository using gh CLI.';
         return $result !== '';
     }
 
-    protected function resolveSourceBranch(): string
+    protected function resolveSourceBranch(string $gitRootDir): string
     {
         if ($this->sourceBranchOverride !== '') {
             return $this->sourceBranchOverride;
@@ -124,7 +159,26 @@ open a GitHub pull request back to the upstream repository using gh CLI.';
             return $tempBranch;
         }
 
+        $current = trim(
+            $this->mu()->execMeGetReturnString(
+                $gitRootDir,
+                'git rev-parse --abbrev-ref HEAD 2>/dev/null',
+                'detect current branch',
+                false,
+                '',
+                false
+            )
+        );
+        if ($current !== '' && $current !== 'HEAD') {
+            return $current;
+        }
+
         return 'main';
+    }
+
+    protected function checkoutBranch(string $dir, string $branch): void
+    {
+        Git::inst($this->mu())->checkoutBranch($dir, $branch);
     }
 
     protected function resolveTargetBranch(): string
@@ -179,6 +233,26 @@ open a GitHub pull request back to the upstream repository using gh CLI.';
         );
     }
 
+    protected function remoteBranchExists(string $dir, string $remote, string $branch): bool
+    {
+        $ref = 'refs/heads/' . $branch;
+
+        $command = 'git ls-remote --heads ' . $remote . ' ' . escapeshellarg($ref);
+
+        $output = trim(
+            $this->mu()->execMeGetReturnString(
+                $dir,
+                $command,
+                "check if remote branch exists: {$remote}/{$branch}",
+                false,
+                '',
+                false
+            )
+        );
+
+        return $output !== '';
+    }
+
     protected function findExistingPr(
         string $dir,
         string $repoSlug,
@@ -186,14 +260,37 @@ open a GitHub pull request back to the upstream repository using gh CLI.';
         string $forkSlug,
         string $sourceBranch
     ): string {
+        $repoSlug = trim($repoSlug);
+        $baseBranch = trim($baseBranch);
+        $forkSlug = trim($forkSlug);
+        $sourceBranch = trim($sourceBranch);
+
+        if (! $this->assertValidRepoSlug($repoSlug)) {
+            $this->mu()->colourPrint('Invalid repo slug: ' . $repoSlug, 'red');
+            return '';
+        }
+
+        $forkOwner = $this->getOwnerFromSlug($forkSlug);
+        if ($forkOwner === '') {
+            $this->mu()->colourPrint('Could not extract fork owner from slug: ' . $forkSlug, 'red');
+            return '';
+        }
+
+        $head = $forkOwner . ':' . $sourceBranch;
+
+        $command =
+            'gh pr list --state open --limit 1 '
+            . '--base ' . escapeshellarg($baseBranch) . ' '
+            . '--head ' . escapeshellarg($head) . ' '
+            . '--json url --jq ".[].url" '
+            . '--repo ' . escapeshellarg($repoSlug);
+
+        $this->mu()->colourPrint('Checking existing PR with: ' . $command, 'light_cyan');
+
         return trim(
             $this->mu()->execMeGetReturnString(
                 $dir,
-                'gh pr list --state open --limit 1 '
-                . '--base ' . escapeshellarg($baseBranch) . ' '
-                . '--head ' . escapeshellarg($forkSlug . ':' . $sourceBranch) . ' '
-                . '--json url --jq ".[].url" '
-                . '--repo ' . escapeshellarg($repoSlug),
+                $command,
                 'check for existing pull request',
                 false,
                 '',
@@ -211,15 +308,40 @@ open a GitHub pull request back to the upstream repository using gh CLI.';
         string $title,
         string $body
     ): string {
+        $repoSlug = trim($repoSlug);
+        $baseBranch = trim($baseBranch);
+        $forkSlug = trim($forkSlug);
+        $sourceBranch = trim($sourceBranch);
+
+        if (! $this->assertValidRepoSlug($repoSlug)) {
+            $this->mu()->colourPrint('Invalid repo slug: ' . $repoSlug, 'red');
+            return '';
+        }
+
+        $forkOwner = $this->getOwnerFromSlug($forkSlug);
+        if ($forkOwner === '') {
+            $this->mu()->colourPrint('Could not extract fork owner from slug: ' . $forkSlug, 'red');
+            return '';
+        }
+
+        Git::inst($this->mu())->fetchAll($dir);
+
+        $head = $forkOwner . ':' . $sourceBranch;
+
+        $command =
+            'gh pr create '
+            . '--repo ' . escapeshellarg($repoSlug) . ' '
+            . '--base ' . escapeshellarg($baseBranch) . ' '
+            . '--head ' . escapeshellarg($head) . ' '
+            . '--title ' . escapeshellarg($title) . ' '
+            . '--body ' . escapeshellarg($body);
+
+        $this->mu()->colourPrint('Running gh command: ' . $command, 'light_cyan');
+
         return trim(
             $this->mu()->execMeGetReturnString(
                 $dir,
-                'gh pr create '
-                . '--repo ' . escapeshellarg($repoSlug) . ' '
-                . '--base ' . escapeshellarg($baseBranch) . ' '
-                . '--head ' . escapeshellarg($forkSlug . ':' . $sourceBranch) . ' '
-                . '--title ' . escapeshellarg($title) . ' '
-                . '--body ' . escapeshellarg($body),
+                $command,
                 'create pull request',
                 false,
                 '',
@@ -237,5 +359,45 @@ open a GitHub pull request back to the upstream repository using gh CLI.';
     {
         return "This pull request was generated automatically by the Silverstripe Upgrader.\n"
             . 'Please review the changes and merge when ready.';
+    }
+
+    protected function hasCommitsComparedToBase(string $dir, string $sourceBranch, string $targetBranch): bool
+    {
+        $command = 'git rev-list --count ' . escapeshellarg($targetBranch . '..' . $sourceBranch) . ' 2>/dev/null';
+        $count = trim(
+            $this->mu()->execMeGetReturnString(
+                $dir,
+                $command,
+                'count commits between ' . $targetBranch . ' and ' . $sourceBranch,
+                false,
+                '',
+                false
+            )
+        );
+
+        return ctype_digit($count) && (int) $count > 0;
+    }
+
+    protected function getOwnerFromSlug(string $slug): string
+    {
+        $slug = trim($slug);
+        if ($slug === '') {
+            return '';
+        }
+        if (strpos($slug, '/') !== false) {
+            $parts = explode('/', $slug, 2);
+            return trim($parts[0] ?? '');
+        }
+        return $slug;
+    }
+
+    protected function assertValidRepoSlug(string $slug): bool
+    {
+        $slug = trim($slug);
+        if ($slug === '' || strpos($slug, '/') === false) {
+            return false;
+        }
+        [$owner, $repo] = explode('/', $slug, 2);
+        return $owner !== '' && $repo !== '';
     }
 }
